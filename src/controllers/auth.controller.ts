@@ -1,0 +1,135 @@
+import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import config from '../config';
+import User from '../models/user.model';
+import { sendSuccess } from '../utils/response';
+import { BadRequestError, ConflictError, UnauthorizedError } from '../utils/errors';
+
+const generateAccessToken = (userId: string, role: string): string => {
+  return jwt.sign({ userId, role }, config.jwt_secret as string, {
+    expiresIn: config.jwt_expires_in,
+  } as jwt.SignOptions);
+};
+
+const generateRefreshToken = (userId: string): string => {
+  return jwt.sign({ userId }, config.jwt_secret as string, {
+    expiresIn: config.jwt_refresh_expires_in,
+  } as jwt.SignOptions);
+};
+
+export const register = async (req: Request, res: Response): Promise<void> => {
+  const { name, email, password } = req.body;
+
+  if (!name || !email || !password) {
+    throw new BadRequestError('Name, email and password are required');
+  }
+
+  if (password.length < 6) {
+    throw new BadRequestError('Password must be at least 6 characters');
+  }
+
+  const existingUser = await User.findOne({ email: email.toLowerCase() });
+  if (existingUser) {
+    throw new ConflictError('Email already registered');
+  }
+
+  const user = await User.create({ name, email, password });
+
+  const accessToken = generateAccessToken(user._id.toString(), user.role);
+  const refreshToken = generateRefreshToken(user._id.toString());
+
+  user.refreshToken = await bcrypt.hash(refreshToken, 12);
+  await user.save();
+
+  sendSuccess(res, 201, 'Registration successful', {
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+    },
+    accessToken,
+    refreshToken,
+  });
+};
+
+export const login = async (req: Request, res: Response): Promise<void> => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    throw new BadRequestError('Email and password are required');
+  }
+
+  const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+
+  if (!user) {
+    throw new UnauthorizedError('Invalid email or password');
+  }
+
+  if (user.isBlocked) {
+    throw new UnauthorizedError('Your account has been blocked');
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  if (!isPasswordValid) {
+    throw new UnauthorizedError('Invalid email or password');
+  }
+
+  const accessToken = generateAccessToken(user._id.toString(), user.role);
+  const refreshToken = generateRefreshToken(user._id.toString());
+
+  user.refreshToken = await bcrypt.hash(refreshToken, 12);
+  await user.save();
+
+  sendSuccess(res, 200, 'Login successful', {
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+    },
+    accessToken,
+    refreshToken,
+  });
+};
+
+export const refreshToken = async (req: Request, res: Response): Promise<void> => {
+  const { refreshToken: token } = req.body;
+
+  if (!token) {
+    throw new BadRequestError('Refresh token is required');
+  }
+
+  let decoded: { userId: string };
+  try {
+    decoded = jwt.verify(token, config.jwt_secret as string) as { userId: string };
+  } catch {
+    throw new UnauthorizedError('Invalid or expired refresh token');
+  }
+
+  const user = await User.findById(decoded.userId).select('+refreshToken');
+
+  if (!user || !user.refreshToken) {
+    throw new UnauthorizedError('Invalid refresh token');
+  }
+
+  const isTokenValid = await bcrypt.compare(token, user.refreshToken);
+  if (!isTokenValid) {
+    throw new UnauthorizedError('Invalid refresh token');
+  }
+
+  const newAccessToken = generateAccessToken(user._id.toString(), user.role);
+
+  sendSuccess(res, 200, 'Token refreshed successfully', {
+    accessToken: newAccessToken,
+  });
+};
+
+export const logout = async (req: Request, res: Response): Promise<void> => {
+  await User.findByIdAndUpdate(req.user!._id, { refreshToken: '' });
+
+  sendSuccess(res, 200, 'Logout successful');
+};
