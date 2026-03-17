@@ -6,6 +6,7 @@ import './types';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import categoryRoutes from './routes/category.routes';
+import productRoutes from './routes/product.routes';
 
 const app = express();
 
@@ -23,7 +24,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
-// app.use('/api/products', productRoutes);
+app.use('/api/products', productRoutes);
 // app.use('/api/reviews', reviewRoutes);
 // app.use('/api/cart', cartRoutes);
 // app.use('/api/orders', orderRoutes);
