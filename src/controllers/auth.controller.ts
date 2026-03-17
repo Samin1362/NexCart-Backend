@@ -128,6 +128,33 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
   });
 };
 
+export const changePassword = async (req: Request, res: Response): Promise<void> => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    throw new BadRequestError('Current password and new password are required');
+  }
+
+  if (newPassword.length < 6) {
+    throw new BadRequestError('New password must be at least 6 characters');
+  }
+
+  const user = await User.findById(req.user!._id).select('+password');
+  if (!user) {
+    throw new UnauthorizedError('User not found');
+  }
+
+  const isValid = await bcrypt.compare(currentPassword, user.password);
+  if (!isValid) {
+    throw new UnauthorizedError('Current password is incorrect');
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  sendSuccess(res, 200, 'Password changed successfully');
+};
+
 export const logout = async (req: Request, res: Response): Promise<void> => {
   await User.findByIdAndUpdate(req.user!._id, { refreshToken: '' });
 

@@ -56,6 +56,28 @@ export const createReview = async (req: Request, res: Response): Promise<void> =
   sendSuccess(res, 201, 'Review created successfully', populated);
 };
 
+export const getMyReviews = async (req: Request, res: Response): Promise<void> => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const skip = (page - 1) * limit;
+
+  const [reviews, total] = await Promise.all([
+    Review.find({ userId: req.user!._id })
+      .populate('productId', 'title slug images')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Review.countDocuments({ userId: req.user!._id }),
+  ]);
+
+  sendSuccess(res, 200, 'My reviews fetched successfully', reviews, {
+    page,
+    limit,
+    total,
+    totalPages: Math.ceil(total / limit),
+  });
+};
+
 export const getReviewsByProduct = async (req: Request, res: Response): Promise<void> => {
   const { productId } = req.params;
   const page = parseInt(req.query.page as string) || 1;
