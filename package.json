@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc",
+    "build": "tsc --project tsconfig.json",
     "start": "node dist/server.js",
     "seed": "ts-node-dev --transpile-only src/seed.ts"
   },
@@ -24,7 +24,8 @@
     "express": "^5.2.1",
     "firebase-admin": "^13.7.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.3.0"
+    "mongoose": "^9.3.0",
+    "typescript": "^5.9.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -32,7 +33,6 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.5.0",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.9.3"
+    "ts-node-dev": "^2.0.0"
   }
 }

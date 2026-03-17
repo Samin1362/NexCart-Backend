@@ -5,8 +5,10 @@ services:
     region: oregon
     plan: free
 
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    # npm install runs without --production so all deps (including typescript) are installed,
+    # then we compile TypeScript, then prune devDeps to keep the image lean.
+    buildCommand: npm install && npm run build && npm prune --production
+    startCommand: node dist/server.js
 
     healthCheckPath: /api/health
 
@@ -14,30 +16,30 @@ services:
       - key: NODE_ENV
         value: production
 
-      # ── Database ──────────────────────────────────
+      # ── Database ──────────────────────────────────────────────────────────
       - key: MONGODB_URI
-        sync: false          # set manually in Render dashboard
+        sync: false          # paste in Render dashboard
 
-      # ── JWT ───────────────────────────────────────
+      # ── JWT ───────────────────────────────────────────────────────────────
       - key: JWT_SECRET
-        generateValue: true  # Render auto-generates a secure random value
+        generateValue: true  # Render auto-generates a secure random string
       - key: JWT_EXPIRES_IN
         value: 15m
       - key: JWT_REFRESH_EXPIRES_IN
         value: 7d
 
-      # ── Frontend origin (for CORS) ─────────────────
+      # ── Frontend origin (CORS) ────────────────────────────────────────────
       - key: FRONTEND_URL
         sync: false          # e.g. https://nexcart.vercel.app
 
-      # ── AI ────────────────────────────────────────
+      # ── Google Gemini AI ──────────────────────────────────────────────────
       - key: GEMINI_API_KEY
         sync: false
 
-      # ── Firebase ──────────────────────────────────
+      # ── Firebase Admin SDK ────────────────────────────────────────────────
       - key: FIREBASE_PROJECT_ID
         sync: false
       - key: FIREBASE_CLIENT_EMAIL
         sync: false
       - key: FIREBASE_PRIVATE_KEY
-        sync: false          # paste the full key including \n characters
+        sync: false          # paste the full key — Render preserves literal \n
