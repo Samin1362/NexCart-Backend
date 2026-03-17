@@ -5,7 +5,7 @@ import { authorize } from '../middlewares/role.middleware';
 
 const router = Router();
 
-router.post('/chat', authenticate, chat);
+router.post('/chat', chat);
 router.post('/generate-description', authenticate, authorize('ADMIN'), generateDescription);
 router.post('/review-summary', reviewSummary);
 
