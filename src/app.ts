@@ -11,6 +11,7 @@ import reviewRoutes from './routes/review.routes';
 import cartRoutes from './routes/cart.routes';
 import orderRoutes from './routes/order.routes';
 import dashboardRoutes from './routes/dashboard.routes';
+import aiRoutes from './routes/ai.routes';
 
 const app = express();
 
@@ -33,7 +34,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-// app.use('/api/ai', aiRoutes);
+app.use('/api/ai', aiRoutes);
 
 // 404 handler
 app.use((_req: Request, _res: Response, next: NextFunction) => {
