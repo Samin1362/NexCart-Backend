@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import config from '../config';
+import admin from '../config/firebase-admin';
 import User from '../models/user.model';
 import { sendSuccess } from '../utils/response';
 import { BadRequestError, ConflictError, UnauthorizedError } from '../utils/errors';
@@ -159,4 +160,65 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
   await User.findByIdAndUpdate(req.user!._id, { refreshToken: '' });
 
   sendSuccess(res, 200, 'Logout successful');
+};
+
+export const googleAuth = async (req: Request, res: Response): Promise<void> => {
+  const { idToken } = req.body;
+
+  if (!idToken) {
+    throw new BadRequestError('Firebase ID token is required');
+  }
+
+  let decoded: admin.auth.DecodedIdToken;
+  try {
+    decoded = await admin.auth().verifyIdToken(idToken);
+  } catch {
+    throw new UnauthorizedError('Invalid or expired Firebase token');
+  }
+
+  const { uid, email, name, picture } = decoded;
+
+  if (!email) {
+    throw new BadRequestError('Google account must have an email address');
+  }
+
+  let user = await User.findOne({ email: email.toLowerCase() });
+
+  if (!user) {
+    // New user — create from Google profile
+    user = await User.create({
+      name: name || email.split('@')[0],
+      email: email.toLowerCase(),
+      googleId: uid,
+      avatar: picture || '',
+    });
+  } else {
+    // Existing user — link Google account and sync avatar
+    let changed = false;
+    if (!user.googleId) { user.googleId = uid; changed = true; }
+    if (picture && !user.avatar) { user.avatar = picture; changed = true; }
+    if (changed) await user.save();
+  }
+
+  if (user.isBlocked) {
+    throw new UnauthorizedError('Your account has been blocked');
+  }
+
+  const accessToken = generateAccessToken(user._id.toString(), user.role);
+  const refreshToken = generateRefreshToken(user._id.toString());
+
+  user.refreshToken = await bcrypt.hash(refreshToken, 12);
+  await user.save();
+
+  sendSuccess(res, 200, 'Google login successful', {
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+    },
+    accessToken,
+    refreshToken,
+  });
 };

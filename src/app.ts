@@ -20,7 +20,9 @@ const app = express();
    ───────────────────────────────────────── */
 const allowedOrigins = [
   'http://localhost:3000',
+  'http://localhost:3001',
   'http://localhost:5173',
+  'https://nexcart-backend-gpd0.onrender.com',
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
 ];
 

@@ -37,6 +37,7 @@ export interface IUser {
   password: string;
   role: UserRole;
   avatar: string;
+  googleId: string;
   phone: string;
   address: IAddress;
   isBlocked: boolean;
