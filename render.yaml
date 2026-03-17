@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: nexcart-api
+    runtime: node
+    region: oregon
+    plan: free
+
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+
+    healthCheckPath: /api/health
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # ── Database ──────────────────────────────────
+      - key: MONGODB_URI
+        sync: false          # set manually in Render dashboard
+
+      # ── JWT ───────────────────────────────────────
+      - key: JWT_SECRET
+        generateValue: true  # Render auto-generates a secure random value
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+
+      # ── Frontend origin (for CORS) ─────────────────
+      - key: FRONTEND_URL
+        sync: false          # e.g. https://nexcart.vercel.app
+
+      # ── AI ────────────────────────────────────────
+      - key: GEMINI_API_KEY
+        sync: false
+
+      # ── Firebase ──────────────────────────────────
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false          # paste the full key including \n characters

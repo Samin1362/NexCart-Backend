@@ -1,7 +1,12 @@
 {
-  "name": "server",
+  "name": "nexcart-api",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "NexCart e-commerce REST API",
+  "main": "dist/server.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
@@ -11,7 +16,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "bcrypt": "^6.0.0",
