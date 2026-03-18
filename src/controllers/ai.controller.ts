@@ -15,8 +15,7 @@ const getModel = () => {
     throw new AppError('AI service is currently unavailable', 503);
   }
   const genAI = new GoogleGenerativeAI(config.gemini_api_key);
-  // gemini-2.0-flash-lite: 30 RPM (vs 15 RPM for flash) — better for free-tier usage
-  return genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
+  return genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
 };
 
 /**
