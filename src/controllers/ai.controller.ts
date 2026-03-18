@@ -57,6 +57,148 @@ const generate = async (prompt: string): Promise<string> => {
   throw new AppError('AI service failed after multiple retries', 503);
 };
 
+/* ── Simple keyword-based chat (no external API — always works) ── */
+
+type ProductDoc = { title: string; price: number; discountPrice: number; brand?: string; category?: { name: string } };
+
+const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+const greetings = [
+  "Hey there! 👋 I'm NexCart's shopping assistant. What can I help you find today?",
+  "Hi! Welcome to NexCart. Looking for something specific, or just browsing?",
+  "Hello! Great to see you. I can help you find products, check prices, or answer shopping questions.",
+];
+
+const farewells = [
+  "Happy shopping! Come back anytime. 😊",
+  "Take care! Don't forget to check our latest deals.",
+  "Goodbye! Hope you found what you were looking for.",
+];
+
+const shippingReplies = [
+  "We offer standard shipping (5–7 days) and express shipping (1–2 days). Free shipping on orders over $100! 🚚",
+  "Standard delivery takes 5–7 business days. Express is 1–2 days. Orders above $100 ship free!",
+];
+
+const returnReplies = [
+  "We have a hassle-free 30-day return policy. Just contact support and we'll sort it out. 📦",
+  "You can return any item within 30 days of delivery — no questions asked!",
+];
+
+const paymentReplies = [
+  "We accept all major credit/debit cards, PayPal, and more. All transactions are SSL secured. 🔒",
+  "We support Visa, Mastercard, PayPal, and other payment methods. Your data is always safe with us.",
+];
+
+const discountReplies = [
+  "Check out our Products page for the latest deals and discounted items! We update offers regularly. 🏷️",
+  "We always have items on sale! Head to the shop and filter by discounted price to find the best deals.",
+];
+
+const helpReplies = [
+  "I can help you find products, answer questions about shipping, returns, or payments. What do you need?",
+  "Ask me about our products, delivery times, return policy, or anything shopping-related. I'm here to help!",
+];
+
+const defaultReplies = [
+  "I'm here to help with shopping questions! You can ask me about products, shipping, returns, or deals. 🛍️",
+  "That's a bit outside my expertise! I'm best at helping you find great products on NexCart. What are you looking for?",
+  "I specialise in helping you shop smarter. Ask me about products, prices, or our policies!",
+];
+
+function buildReply(msg: string, products: ProductDoc[]): string {
+  const m = msg.toLowerCase();
+
+  // Greetings
+  if (/\b(hi|hello|hey|howdy|good (morning|afternoon|evening)|sup|what'?s up)\b/.test(m)) {
+    return pick(greetings);
+  }
+
+  // Farewell
+  if (/\b(bye|goodbye|see you|take care|thanks|thank you|cheers)\b/.test(m)) {
+    return pick(farewells);
+  }
+
+  // Shipping / delivery
+  if (/\b(ship|shipping|deliver|delivery|how long|when will|arrive|dispatch)\b/.test(m)) {
+    return pick(shippingReplies);
+  }
+
+  // Returns / refunds
+  if (/\b(return|refund|exchange|send back|money back)\b/.test(m)) {
+    return pick(returnReplies);
+  }
+
+  // Payment
+  if (/\b(pay|payment|checkout|credit card|debit|paypal|cash|invoice|billing)\b/.test(m)) {
+    return pick(paymentReplies);
+  }
+
+  // Discounts / sale
+  if (/\b(discount|sale|offer|deal|promo|coupon|cheap|affordable|budget|low price|save)\b/.test(m)) {
+    const onSale = products.filter((p) => p.discountPrice > 0).slice(0, 3);
+    if (onSale.length) {
+      const names = onSale.map((p) => `**${p.title}** ($${p.discountPrice})`).join(', ');
+      return `We have some great deals right now! Check out ${names} — and many more on the shop page. 🏷️`;
+    }
+    return pick(discountReplies);
+  }
+
+  // Price / budget query  e.g. "under $50", "below 100"
+  const priceMatch = m.match(/(?:under|below|less than|max|around|up to)\s*\$?(\d+)/);
+  if (priceMatch) {
+    const budget = parseFloat(priceMatch[1]);
+    const affordable = products
+      .filter((p) => (p.discountPrice > 0 ? p.discountPrice : p.price) <= budget)
+      .slice(0, 3);
+    if (affordable.length) {
+      const names = affordable
+        .map((p) => `**${p.title}** ($${p.discountPrice > 0 ? p.discountPrice : p.price})`)
+        .join(', ');
+      return `Here are some options under $${budget}: ${names}. There are more in the shop!`;
+    }
+    return `I couldn't find products under $${budget} right now, but check the shop — we update stock regularly!`;
+  }
+
+  // Help / capabilities
+  if (/\b(help|what can you|support|assist|capabilities|what do you)\b/.test(m)) {
+    return pick(helpReplies);
+  }
+
+  // Generic product search — match any word against product titles/brands
+  const words = m.replace(/[^a-z0-9 ]/g, '').split(/\s+/).filter((w) => w.length > 2);
+  const matched = products.filter((p) => {
+    const haystack = `${p.title} ${p.brand || ''} ${p.category?.name || ''}`.toLowerCase();
+    return words.some((w) => haystack.includes(w));
+  }).slice(0, 3);
+
+  if (matched.length) {
+    const names = matched
+      .map((p) => {
+        const price = p.discountPrice > 0 ? p.discountPrice : p.price;
+        return `**${p.title}** ($${price})`;
+      })
+      .join(', ');
+    return `I found some products that might interest you: ${names}. Check the shop for the full selection!`;
+  }
+
+  // Show a few featured products for vague queries
+  if (/\b(product|item|buy|shop|browse|show|what|anything|everything|catalog|stock)\b/.test(m)) {
+    const featured = products.slice(0, 3);
+    if (featured.length) {
+      const names = featured
+        .map((p) => {
+          const price = p.discountPrice > 0 ? p.discountPrice : p.price;
+          return `**${p.title}** ($${price})`;
+        })
+        .join(', ');
+      return `Here are some of our popular products: ${names}. Browse the full catalog in our shop!`;
+    }
+  }
+
+  return pick(defaultReplies);
+}
+
 /* ── controllers ── */
 
 export const chat = async (req: Request, res: Response): Promise<void> => {
@@ -64,28 +206,11 @@ export const chat = async (req: Request, res: Response): Promise<void> => {
   if (!message) throw new BadRequestError('message is required');
 
   const products = await Product.find({ isActive: true })
-    .select('title price discountPrice category brand')
+    .select('title price discountPrice brand')
     .populate('category', 'name')
-    .limit(15);
+    .lean<ProductDoc[]>();
 
-  const catalog = products
-    .map((p) => {
-      const cat = p.category as unknown as { name: string };
-      const price = p.discountPrice > 0 ? p.discountPrice : p.price;
-      return `${p.title} | $${price} | ${cat?.name || 'General'} | ${p.brand || ''}`.trim();
-    })
-    .join('\n');
-
-  const prompt = `You are NexCart's friendly shopping assistant. Help customers find products and answer shopping questions briefly.
-
-Products (title | price | category | brand):
-${catalog}
-
-Customer: ${message}
-
-Reply in 2-3 sentences. Recommend specific products by name when relevant. If off-topic, redirect to shopping.`;
-
-  const reply = await generate(prompt);
+  const reply = buildReply(String(message), products);
   sendSuccess(res, 200, 'Chat response generated', { reply });
 };
 
