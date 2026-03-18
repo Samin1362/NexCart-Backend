@@ -53,6 +53,7 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
   const priceMax = parseFloat(req.query.priceMax as string);
   const rating = parseFloat(req.query.rating as string);
   const brand = req.query.brand as string;
+  const discounted = req.query.discounted as string;
   const sortParam = (req.query.sort as string) || '-createdAt';
 
   const filter: Record<string, unknown> = { isActive: true };
@@ -81,6 +82,10 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
 
   if (brand) {
     filter.brand = { $regex: brand, $options: 'i' };
+  }
+
+  if (discounted === 'true') {
+    filter.discountPrice = { $gt: 0 };
   }
 
   const sortObj: Record<string, 1 | -1> = {};

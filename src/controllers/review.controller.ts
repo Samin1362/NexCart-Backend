@@ -101,6 +101,26 @@ export const getReviewsByProduct = async (req: Request, res: Response): Promise<
   });
 };
 
+export const getTopReviews = async (_req: Request, res: Response): Promise<void> => {
+  const reviews = await Review.find({ rating: { $gte: 4 } })
+    .sort({ rating: -1, createdAt: -1 })
+    .limit(6)
+    .populate('userId', 'name')
+    .populate('productId', 'title')
+    .lean();
+
+  const data = reviews.map((r) => ({
+    _id: r._id,
+    rating: r.rating,
+    comment: r.comment,
+    reviewer: (r.userId as unknown as { name: string })?.name ?? 'Anonymous',
+    productTitle: (r.productId as unknown as { title: string })?.title ?? '',
+    createdAt: r.createdAt,
+  }));
+
+  sendSuccess(res, 200, 'Top reviews fetched', data);
+};
+
 export const deleteReview = async (req: Request, res: Response): Promise<void> => {
   const review = await Review.findById(req.params.id);
 
