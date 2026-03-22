@@ -88,6 +88,11 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
     filter.discountPrice = { $gt: 0 };
   }
 
+  const stockLt = parseFloat(req.query.stock_lt as string);
+  if (!isNaN(stockLt)) {
+    filter.stock = { $lt: stockLt };
+  }
+
   const sortObj: Record<string, 1 | -1> = {};
   if (sortParam.startsWith('-')) {
     sortObj[sortParam.substring(1)] = -1;

@@ -126,3 +126,30 @@ export const getRecentOrders = async (_req: Request, res: Response): Promise<voi
 
   sendSuccess(res, 200, 'Recent orders fetched successfully', orders);
 };
+
+export const getTopProducts = async (_req: Request, res: Response): Promise<void> => {
+  const topProducts = await Order.aggregate([
+    { $unwind: '$items' },
+    {
+      $group: {
+        _id: '$items.productId',
+        title: { $first: '$items.title' },
+        image: { $first: '$items.image' },
+        totalQty: { $sum: '$items.quantity' },
+        totalRevenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } },
+      },
+    },
+    { $sort: { totalRevenue: -1 } },
+    { $limit: 5 },
+  ]);
+
+  const formatted = topProducts.map((p) => ({
+    productId: p._id,
+    title: p.title,
+    image: p.image,
+    totalQty: p.totalQty,
+    totalRevenue: Math.round(p.totalRevenue * 100) / 100,
+  }));
+
+  sendSuccess(res, 200, 'Top products fetched successfully', formatted);
+};
