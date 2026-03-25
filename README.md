@@ -1,10 +1,10 @@
 # NexCart Backend API
 
-A full-featured e-commerce REST API built with Express 5, TypeScript, and Mongoose 9. Features JWT authentication, role-based access control, AI-powered features via Google Gemini, and comprehensive admin dashboard analytics.
+A full-featured e-commerce REST API built with Express 5, TypeScript, and Mongoose 9. Features JWT authentication, role-based access control, AI-powered features via Google Gemini, comprehensive admin dashboard analytics, and a fully automated CI/CD pipeline.
 
 ## Tech Stack
 
-- **Runtime**: Node.js
+- **Runtime**: Node.js 24
 - **Framework**: Express 5
 - **Language**: TypeScript
 - **Database**: MongoDB Atlas (Mongoose 9 ODM)
@@ -12,28 +12,36 @@ A full-featured e-commerce REST API built with Express 5, TypeScript, and Mongoo
 - **Password Hashing**: bcrypt (12 rounds)
 - **AI Integration**: Google Gemini 2.0 Flash
 - **Architecture**: MVC (Model-View-Controller)
+- **Testing**: Vitest + Supertest + mongodb-memory-server
+- **Linting**: ESLint (flat config) + @typescript-eslint
+- **CI/CD**: GitHub Actions → Render
 
 ## Project Structure
 
 ```
 Server/
 ├── src/
+│   ├── __tests__/
+│   │   └── setup.ts                # Vitest global setup (MongoDB Memory Server)
 │   ├── config/
-│   │   └── index.ts           # Environment config loader
+│   │   ├── index.ts                # Environment config loader
+│   │   └── firebase-admin.ts       # Firebase Admin SDK init
 │   ├── controllers/
-│   │   ├── auth.controller.ts  # Register, login, refresh, logout
-│   │   ├── user.controller.ts  # Profile & admin user management
+│   │   ├── auth.controller.ts      # Register, login, refresh, logout
+│   │   ├── user.controller.ts      # Profile & admin user management
 │   │   ├── category.controller.ts
 │   │   ├── product.controller.ts
 │   │   ├── review.controller.ts
 │   │   ├── cart.controller.ts
 │   │   ├── order.controller.ts
 │   │   ├── dashboard.controller.ts
-│   │   └── ai.controller.ts    # Gemini AI features
+│   │   ├── ai.controller.ts        # Gemini AI features
+│   │   └── __tests__/              # Route integration tests
 │   ├── middlewares/
-│   │   ├── auth.middleware.ts   # JWT verification
-│   │   ├── role.middleware.ts   # Role-based authorization
-│   │   └── validate.middleware.ts
+│   │   ├── auth.middleware.ts      # JWT verification
+│   │   ├── role.middleware.ts      # Role-based authorization
+│   │   ├── validate.middleware.ts
+│   │   └── __tests__/             # Middleware unit/integration tests
 │   ├── models/
 │   │   ├── user.model.ts
 │   │   ├── category.model.ts
@@ -52,15 +60,21 @@ Server/
 │   │   ├── dashboard.routes.ts
 │   │   └── ai.routes.ts
 │   ├── types/
-│   │   └── index.ts            # All TypeScript interfaces
+│   │   └── index.ts                # All TypeScript interfaces
 │   ├── utils/
-│   │   ├── errors.ts           # Custom error classes
-│   │   ├── helpers.ts          # Slug generator
-│   │   └── response.ts         # Standardized API responses
-│   ├── app.ts                  # Express app configuration
-│   ├── server.ts               # MongoDB connection & server start
-│   └── seed.ts                 # Database seeder with demo data
+│   │   ├── errors.ts               # Custom error classes
+│   │   ├── helpers.ts              # Slug generator
+│   │   ├── response.ts             # Standardized API responses
+│   │   └── __tests__/             # Utility unit tests
+│   ├── app.ts                      # Express app configuration
+│   ├── server.ts                   # MongoDB connection & server start
+│   └── seed.ts                     # Database seeder with demo data
+├── .github/
+│   └── workflows/
+│       └── ci.yml                  # GitHub Actions CI/CD pipeline
 ├── .env
+├── eslint.config.mjs               # ESLint flat config
+├── vitest.config.ts                # Vitest configuration
 ├── package.json
 └── tsconfig.json
 ```
@@ -123,6 +137,127 @@ npm start
 | User  | john@nexcart.com     | 123456   |
 | User  | jane@nexcart.com     | 123456   |
 | User  | bob@nexcart.com      | 123456   |
+
+---
+
+## CI/CD Pipeline
+
+The project uses **GitHub Actions** for continuous integration and **Render** for continuous deployment. Every push to `main` or `master` automatically runs the full pipeline.
+
+### Pipeline Overview
+
+```
+Push to main/master
+        │
+        ▼
+┌─────────────────────┐
+│   Lint & Build Job  │
+│  ─────────────────  │
+│  1. ESLint check    │
+│  2. TypeScript check│
+│  3. Build (tsc)     │
+└────────┬────────────┘
+         │ (passes)
+         ▼
+┌─────────────────────┐
+│     Test Job        │
+│  ─────────────────  │
+│  133 tests via      │
+│  Vitest + Supertest │
+│  (in-memory MongoDB)│
+└────────┬────────────┘
+         │ (passes)
+         ▼
+┌─────────────────────┐
+│  Render Auto-Deploy │
+│  (main branch only) │
+└─────────────────────┘
+```
+
+### GitHub Actions Workflow
+
+The workflow file is at `.github/workflows/ci.yml`. It runs two sequential jobs:
+
+**Job 1 — Lint & Build** (`lint-and-build`):
+1. Checks out code
+2. Sets up Node.js 24
+3. Installs dependencies (`npm ci --ignore-scripts`)
+4. Runs ESLint (`npm run lint`)
+5. Runs TypeScript type-check (`npm run typecheck`)
+6. Compiles TypeScript (`npm run build`)
+
+**Job 2 — Test** (`test`, runs after `lint-and-build`):
+1. Checks out code
+2. Sets up Node.js 24
+3. Installs dependencies
+4. Runs the full test suite (`npm test`) with CI-safe environment variables
+
+The test job only runs if the lint-and-build job passes, preventing unnecessary test runs on broken code.
+
+### Testing Setup
+
+Tests use **Vitest** for the test runner, **Supertest** for HTTP integration testing, and **mongodb-memory-server** to spin up a real in-memory MongoDB instance — no external database needed in CI.
+
+```
+src/
+├── __tests__/setup.ts               # Global setup: starts MongoDB, sets env vars, wipes collections between tests
+├── utils/__tests__/helpers.test.ts  # generateSlug — 11 tests
+├── utils/__tests__/errors.test.ts   # Custom error classes — 18 tests
+├── utils/__tests__/response.test.ts # sendSuccess / sendError — 9 tests
+├── middlewares/__tests__/
+│   ├── validate.test.ts             # Zod validation middleware — 17 tests
+│   ├── role.test.ts                 # authorize() RBAC middleware — 5 tests
+│   └── auth.test.ts                 # authenticate() JWT middleware — 7 integration tests
+└── controllers/__tests__/
+    ├── auth.test.ts                 # /api/auth routes — 16 tests
+    ├── category.test.ts             # /api/categories routes — 12 tests
+    ├── product.test.ts              # /api/products routes — 15 tests
+    ├── cart.test.ts                 # /api/cart routes — 10 tests
+    └── order.test.ts                # /api/orders routes — 13 tests
+                                     Total: 133 tests
+```
+
+### Running Tests Locally
+
+```bash
+# Run all tests once
+npm test
+
+# Run in watch mode (re-runs on file changes)
+npm run test:watch
+
+# Run with coverage report
+npm run test:coverage
+```
+
+Coverage reports are generated in `coverage/` (text output + lcov for CI tools).
+
+### All Scripts
+
+| Command                  | Description                                  |
+|--------------------------|----------------------------------------------|
+| `npm run dev`            | Start dev server with hot reload             |
+| `npm run build`          | Compile TypeScript to JavaScript             |
+| `npm start`              | Run compiled production build                |
+| `npm run seed`           | Seed database with demo data                 |
+| `npm run lint`           | Run ESLint on all source files               |
+| `npm run lint:fix`       | Run ESLint and auto-fix fixable issues       |
+| `npm run typecheck`      | TypeScript type-check without emitting files |
+| `npm test`               | Run full test suite (133 tests)              |
+| `npm run test:watch`     | Run tests in watch mode                      |
+| `npm run test:coverage`  | Run tests with coverage report               |
+
+### Render Deployment
+
+The backend is deployed on **Render** at the production URL. Render is connected to the `main` branch and auto-deploys whenever a push reaches `main` — which only happens after the full CI pipeline passes on GitHub Actions.
+
+**Deployment flow:**
+1. Developer pushes to `master` → CI runs
+2. `master` is merged into `main` → Render detects the push
+3. Render pulls the latest code, runs `npm run build`, then `npm start`
+4. Zero-downtime deploy (Render keeps the old instance running until the new one is healthy)
+
+---
 
 ## API Response Format
 
@@ -601,14 +736,3 @@ Running `npm run seed` populates:
 | Products   | 25    | 8 featured, realistic prices, specs, and tags    |
 | Reviews    | 15    | Ratings 4-5, spread across 9 products            |
 | Orders     | 5     | DELIVERED, SHIPPED, PROCESSING, PENDING, CANCELLED |
-
----
-
-## Scripts
-
-| Command         | Description                        |
-|----------------|-------------------------------------|
-| `npm run dev`  | Start dev server with hot reload    |
-| `npm run build`| Compile TypeScript to JavaScript    |
-| `npm start`    | Run compiled production build       |
-| `npm run seed` | Seed database with demo data        |
