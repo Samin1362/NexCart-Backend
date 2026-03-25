@@ -8,6 +8,10 @@ import { generateSlug } from '../utils/helpers';
 export const createProduct = async (req: Request, res: Response): Promise<void> => {
   const { title, description, price, discountPrice, images, category, brand, stock, tags, specifications, isFeatured } = req.body;
 
+  if (!images || images.length === 0) {
+    throw new BadRequestError('At least one image is required');
+  }
+
   if (discountPrice !== undefined && discountPrice >= price) {
     throw new BadRequestError('Discount price must be less than the original price');
   }

@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import User from '../models/user.model';
 import Product from '../models/product.model';
 import Order from '../models/order.model';
-import Category from '../models/category.model';
 import { sendSuccess } from '../utils/response';
 
 export const getStats = async (_req: Request, res: Response): Promise<void> => {
