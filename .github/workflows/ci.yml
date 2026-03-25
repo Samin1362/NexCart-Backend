@@ -3,22 +3,13 @@ name: Backend CI
 on:
   push:
     branches: [main, master]
-    paths:
-      - 'Server/**'
-      - '.github/workflows/ci.yml'
   pull_request:
     branches: [main]
-    paths:
-      - 'Server/**'
-      - '.github/workflows/ci.yml'
 
 jobs:
   lint-and-build:
     name: Lint & Build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Server
 
     steps:
       - name: Checkout code
@@ -27,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install dependencies
         run: npm ci --ignore-scripts
@@ -45,9 +36,6 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     needs: lint-and-build
-    defaults:
-      run:
-        working-directory: Server
 
     steps:
       - name: Checkout code
@@ -56,7 +44,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install dependencies
         run: npm ci --ignore-scripts
@@ -68,11 +56,3 @@ jobs:
           JWT_SECRET: test-jwt-secret-nexcart-ci
           JWT_EXPIRES_IN: 15m
           JWT_REFRESH_EXPIRES_IN: 7d
-
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: Server/coverage/
-          retention-days: 7
