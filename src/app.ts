@@ -12,6 +12,7 @@ import cartRoutes from './routes/cart.routes';
 import orderRoutes from './routes/order.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import aiRoutes from './routes/ai.routes';
+import wishlistRoutes from './routes/wishlist.routes';
 
 const app = express();
 
@@ -492,6 +493,7 @@ app.use('/api/cart',      cartRoutes);
 app.use('/api/orders',    orderRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/ai',        aiRoutes);
+app.use('/api/wishlist',  wishlistRoutes);
 
 /* ─────────────────────────────────────────
    Error handlers
