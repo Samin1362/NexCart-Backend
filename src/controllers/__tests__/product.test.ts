@@ -135,7 +135,7 @@ describe('GET /api/products', () => {
   });
 
   it('filters by priceMax', async () => {
-    const res = await request(app).get('/api/products?priceMax=100');
+    const res = await request(app).get('/api/products?maxPrice=100');
     expect(res.status).toBe(200);
     res.body.data.forEach((p: { price: number }) => {
       expect(p.price).toBeLessThanOrEqual(100);
