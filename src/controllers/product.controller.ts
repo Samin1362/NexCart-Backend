@@ -53,17 +53,31 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
   const limit = parseInt(req.query.limit as string) || 12;
   const search = req.query.search as string;
   const categorySlug = req.query.category as string;
-  const priceMin = parseFloat(req.query.priceMin as string);
-  const priceMax = parseFloat(req.query.priceMax as string);
+  const minPrice = parseFloat(req.query.minPrice as string);
+  const maxPrice = parseFloat(req.query.maxPrice as string);
   const rating = parseFloat(req.query.rating as string);
   const brand = req.query.brand as string;
   const discounted = req.query.discounted as string;
-  const sortParam = (req.query.sort as string) || '-createdAt';
+  const rawSort = (req.query.sort as string) || 'newest';
+
+  // Map frontend sort aliases to MongoDB field names
+  const sortAliases: Record<string, string> = {
+    newest:     '-createdAt',
+    price_asc:  'price',
+    price_desc: '-price',
+    rating:     '-rating',
+  };
+  const sortParam = sortAliases[rawSort] ?? rawSort;
 
   const filter: Record<string, unknown> = { isActive: true };
 
+  // Partial, case-insensitive regex search across title, brand, and tags
   if (search) {
-    filter.$text = { $search: search };
+    filter.$or = [
+      { title: { $regex: search, $options: 'i' } },
+      { brand: { $regex: search, $options: 'i' } },
+      { tags: { $regex: search, $options: 'i' } },
+    ];
   }
 
   if (categorySlug) {
@@ -73,10 +87,10 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
     }
   }
 
-  if (!isNaN(priceMin) || !isNaN(priceMax)) {
+  if (!isNaN(minPrice) || !isNaN(maxPrice)) {
     const priceFilter: Record<string, number> = {};
-    if (!isNaN(priceMin)) priceFilter.$gte = priceMin;
-    if (!isNaN(priceMax)) priceFilter.$lte = priceMax;
+    if (!isNaN(minPrice)) priceFilter.$gte = minPrice;
+    if (!isNaN(maxPrice)) priceFilter.$lte = maxPrice;
     filter.price = priceFilter;
   }
 

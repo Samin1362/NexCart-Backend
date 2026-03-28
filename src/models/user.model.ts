@@ -55,6 +55,10 @@ const userSchema = new Schema<IUser>(
       default: '',
       select: false,
     },
+    wishlist: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
+      default: [],
+    },
   },
   {
     timestamps: true,

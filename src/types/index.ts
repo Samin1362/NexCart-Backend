@@ -42,6 +42,7 @@ export interface IUser {
   address: IAddress;
   isBlocked: boolean;
   refreshToken: string;
+  wishlist: Types.ObjectId[] | IProduct[];
   createdAt: Date;
   updatedAt: Date;
 }
